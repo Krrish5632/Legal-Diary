@@ -58,20 +58,11 @@ export const AIAssistant = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom
-  useEffect(() => {
+  React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Handle Textarea Auto-resize
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-  };
-
-  const sendMessage = async (text?: string) => {
+  const sendMessage = async (text?: string) => 
     const msg = (text || input).trim();
     if (!msg || loading) return;
     

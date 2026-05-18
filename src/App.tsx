@@ -38,6 +38,16 @@ export default function App() {
     setIsLoggedIn(false);
     setActiveTab('dashboard');
   };
+  // Storage permission request
+React.useEffect(() => {
+  const reqPermission = async () => {
+    try {
+      const { Filesystem } = await import('@capacitor/filesystem');
+      await Filesystem.requestPermissions();
+    } catch { /* Web environment - skip */ }
+  };
+  reqPermission();
+}, []);
 
   if (!isLoggedIn) return <Login onSuccess={handleLoginSuccess} />;
 

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, Copy, Check, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 import { cn } from '../lib/utils';
 
@@ -24,13 +24,12 @@ const QUICK_PROMPTS = [
 ];
 
 const getApiKey = (): string => {
-  // Multiple fallbacks for the API key
-  const key =
+  return (
     (typeof process !== 'undefined' && (process.env as any)?.GEMINI_API_KEY) ||
     (typeof process !== 'undefined' && (process.env as any)?.API_KEY) ||
     (window as any).__GEMINI_API_KEY__ ||
-    '';
-  return key;
+    ''
+  );
 };
 
 const formatText = (text: string) => {
@@ -43,35 +42,41 @@ const formatText = (text: string) => {
 };
 
 export const AIAssistant = () => {
-  const [messages, setMessages] = React.useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: '0', role: 'assistant',
-      content: '🙏 **Namaskar Advocate Sahab!**\n\nMain aapka AI Legal Assistant hoon — Gemini AI se powered.\n\nMain in vishayon mein aapki madad kar sakta hoon:\n• **IPC / BNS** sections explain karna\n• **BNSS / CrPC** procedures\n• **Bail application** ke grounds\n• **Legal notice** drafting\n• **Case strategy** suggestions\n• **Landmark judgments**\n• **Vakalatnama** drafts\n\nNeeche se quick prompt chunein ya kuch bhi poochein — Hindi ya English mein!'
+      id: '0', 
+      role: 'assistant',
+      content: '🙏 **Namaskar Advocate Sahab!**\n\nMain aapka AI Legal Assistant hoon — Gemini AI se powered.\n\nMain in vishayon mein aapki madad kar sakta hoon:\n• **IPC / BNS** sections explain karna\n• **BNSS / CrPC** procedures\n• **Bail application** ke grounds\n• **Legal notice** drafting\n• **Case strategy** suggestions\n• **Landmark judgments (Internet se verified)**\n• **Vakalatnama** drafts\n\nNeeche se quick prompt chunein ya kuch bhi poochein — Hindi ya English mein!'
     }
   ]);
-  const [input, setInput] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
-  const [copied, setCopied] = React.useState<string | null>(null);
-  const [apiKeyMissing, setApiKeyMissing] = React.useState(false);
-  const bottomRef = React.useRef<HTMLDivElement>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  React.useEffect(() => {
+  // Auto-scroll to bottom
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  React.useEffect(() => {
-    const getApiKey = (): string => {
-  const key =
-    (typeof process !== 'undefined' && (process.env as any)?.GEMINI_API_KEY) ||
-    (window as any).__GEMINI_API_KEY__ ||
-    '';
-  return key;
-};
+  // Handle Textarea Auto-resize
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  };
+
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;
+    
     setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset height
 
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: msg };
     const newMessages = [...messages, userMsg];
@@ -80,33 +85,21 @@ export const AIAssistant = () => {
 
     try {
       const apiKey = getApiKey();
-      if (!apiKey) throw new Error('API_KEY_MISSING');
+      if (!apiKey) {
+        setApiKeyMissing(true);
+        throw new Error('API_KEY_MISSING');
+      }
 
       const ai = new GoogleGenAI({ apiKey });
 
       const systemInstruction = `You are an expert Indian legal assistant for practicing advocates in India.
-
-Your knowledge covers:
-- Bharatiya Nyaya Sanhita (BNS) 2023 replacing IPC
-- Bharatiya Nagarik Suraksha Sanhita (BNSS) 2023 replacing CrPC
-- Bharatiya Sakshya Adhiniyam (BSA) 2023 replacing Evidence Act
-- Code of Civil Procedure (CPC) 1908
-- Constitution of India with all amendments
-- Supreme Court and High Court landmark judgments
-- POCSO Act, Protection of Women from Domestic Violence Act
-- Hindu Marriage Act, Muslim Personal Law (Dissolution of Marriage)
-- Motor Vehicles Act, Negotiable Instruments Act
-- Consumer Protection Act, RERA
-- Limitation Act 1963
-
+Your knowledge covers BNS, BNSS, BSA, CPC, Constitution, and landmark Supreme/High Court judgments.
 Rules:
-1. Respond in the SAME language as the user (Hindi/English/Hinglish)
-2. Always cite specific section numbers and landmark cases with citations
-3. For criminal sections: mention punishment, bailable/non-bailable, cognizable/non-cognizable, compoundable status
-4. For legal notices/drafts: provide actual complete draft text
-5. Be practical and court-ready in your advice
-6. Mention both old law (IPC/CrPC) and new law (BNS/BNSS) where applicable
-7. Structure responses clearly with headings and bullet points`;
+1. Respond in the SAME language as the user (Hindi/English/Hinglish).
+2. Always cite specific section numbers and landmark cases.
+3. Because you have internet access (Google Search), ALWAYS ensure your judgments and recent law amendments are factually up-to-date.
+4. Structure responses clearly with headings and bullet points.
+5. Be practical and court-ready in your advice.`;
 
       const history = newMessages.slice(1, -1).slice(-8).map(m => ({
         role: m.role === 'assistant' ? 'model' as const : 'user' as const,
@@ -115,26 +108,31 @@ Rules:
 
       const chat = ai.chats.create({
         model: 'gemini-2.0-flash',
-        config: { systemInstruction, maxOutputTokens: 2000, temperature: 0.7 },
+        config: { 
+          systemInstruction, 
+          maxOutputTokens: 2000, 
+          temperature: 0.5, // Lower temperature for more accurate legal facts
+          tools: [{ googleSearch: {} }] // 🔥 INTERNET ACCESS ENABLED HERE
+        },
         history,
       });
 
       const response = await chat.sendMessage({ message: msg });
-      const responseText = response.text || 'Response generate nahi ho paya. Please retry.';
-
+      const responseText = response.text || '⚠️ Response generate nahi ho paya. Please retry.';
+      
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: responseText }]);
+
     } catch (error: any) {
       let errorMsg = '⚠️ **Error:** Kuch galat hua. Please retry karein.';
 
       if (error.message === 'API_KEY_MISSING') {
-        errorMsg = '🔑 **API Key Missing!**\n\nGemini API key set nahi hai.\n\n**Fix karein:**\nGitHub repo → Settings → Secrets → `GEMINI_API_KEY` add karein.\n\nFir Actions se naya APK build karein.';
-        setApiKeyMissing(true);
+        errorMsg = '🔑 **API Key Missing!**\n\nGemini API key set nahi hai.\n\n**Fix karein:** GitHub repo → Settings → Secrets → `GEMINI_API_KEY` add karein.';
       } else if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('400')) {
-        errorMsg = '🔑 **Invalid API Key!**\n\nAPI key galat hai. Google AI Studio se nai key lein aur GitHub Secrets update karein.';
+        errorMsg = '🔑 **Invalid API Key!**\n\nAPI key galat hai. Google AI Studio se nai key lein aur update karein.';
       } else if (error.message?.includes('QUOTA') || error.message?.includes('429')) {
         errorMsg = '⏳ **Rate Limit!**\n\nThodi der baad retry karein. Free tier ka limit exhaust ho gaya hai.';
-      } else if (error.message?.includes('NetworkError') || error.message?.includes('fetch')) {
-        errorMsg = '📡 **Network Error!**\n\nInternet connection check karein. Gemini API tak pahunch nahi paa raha.';
+      } else if (error.message?.includes('NetworkError') || error.message?.includes('fetch') || !navigator.onLine) {
+        errorMsg = '📡 **Network Error!**\n\nInternet connection check karein.';
       }
 
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: errorMsg }]);
@@ -170,7 +168,7 @@ Rules:
             <Bot size={24} className="text-white" />
           </div>
           <div>
-            <p className="text-[9px] uppercase tracking-[0.3em] font-bold text-purple-400">Powered by Gemini AI</p>
+            <p className="text-[9px] uppercase tracking-[0.3em] font-bold text-purple-400">Powered by Gemini AI (Web Enabled)</p>
             <h2 className="text-xl font-display font-bold text-white">Legal AI Assistant</h2>
           </div>
         </div>
@@ -181,14 +179,14 @@ Rules:
             <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-bold text-red-300">GEMINI_API_KEY not set!</p>
-              <p className="text-[10px] text-red-400 mt-0.5">GitHub Secrets mein GEMINI_API_KEY add karein, phir naya APK build karein.</p>
+              <p className="text-[10px] text-red-400 mt-0.5">Please add a valid API key to use the assistant.</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Quick Prompts */}
-      <div className="px-3 py-2.5 bg-white border-b shrink-0 overflow-x-auto">
+      <div className="px-3 py-2.5 bg-white border-b shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex gap-2" style={{ width: 'max-content' }}>
           {QUICK_PROMPTS.map(p => (
             <button key={p.label} onClick={() => sendMessage(p.prompt)}
@@ -209,21 +207,21 @@ Rules:
             className={cn('flex gap-2.5', m.role === 'user' ? 'flex-row-reverse' : 'flex-row')}>
 
             <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm',
-              m.role === 'user' ? 'bg-legal-green' : 'bg-gradient-to-br from-purple-600 to-indigo-600')}>
+              m.role === 'user' ? 'bg-green-600' : 'bg-gradient-to-br from-purple-600 to-indigo-600')}>
               {m.role === 'user' ? <User size={15} className="text-white" /> : <Bot size={15} className="text-white" />}
             </div>
 
             <div className={cn('max-w-[82%]', m.role === 'user' ? 'items-end' : 'items-start flex flex-col')}>
               <div className={cn('px-4 py-3 text-sm leading-relaxed shadow-sm',
                 m.role === 'user'
-                  ? 'bg-legal-green text-white rounded-2xl rounded-tr-sm'
+                  ? 'bg-green-600 text-white rounded-2xl rounded-tr-sm'
                   : 'bg-white text-zinc-800 rounded-2xl rounded-tl-sm border border-zinc-100')}
                 dangerouslySetInnerHTML={{ __html: formatText(m.content) }} />
 
               {m.role === 'assistant' && (
                 <button onClick={() => copyText(m.id, m.content)}
-                  className="mt-1 flex items-center gap-1 text-[10px] text-zinc-300 hover:text-zinc-500 px-2 py-0.5 transition-all">
-                  {copied === m.id ? <><Check size={10} className="text-legal-green" /> Copied</> : <><Copy size={10} /> Copy</>}
+                  className="mt-1 flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-600 px-2 py-0.5 transition-all">
+                  {copied === m.id ? <><Check size={10} className="text-green-600" /> Copied</> : <><Copy size={10} /> Copy</>}
                 </button>
               )}
             </div>
@@ -241,7 +239,7 @@ Rules:
                   animate={{ y: [0, -5, 0] }}
                   transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }} />
               ))}
-              <span className="text-xs text-zinc-400 ml-1">Thinking...</span>
+              <span className="text-xs text-zinc-400 ml-1">Searching & Thinking...</span>
             </div>
           </div>
         )}
@@ -255,16 +253,20 @@ Rules:
             className="p-2.5 text-zinc-300 hover:text-red-400 hover:bg-red-50 rounded-xl transition-all shrink-0">
             <Trash2 size={17} />
           </button>
+          
           <div className="flex-1 flex items-end bg-zinc-50 border border-zinc-200 rounded-2xl px-3.5 py-2.5 focus-within:border-purple-400 transition-colors">
-            <textarea ref={textareaRef}
+            <textarea 
+              ref={textareaRef}
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder="IPC section, bail grounds, legal notice... (Enter = send)"
+              placeholder="Search laws, cases, or type a legal query... (Enter = send)"
               rows={1}
               style={{ resize: 'none', maxHeight: '120px', lineHeight: '1.5' }}
-              className="flex-1 bg-transparent text-sm outline-none" />
+              className="flex-1 bg-transparent text-sm outline-none overflow-y-auto" 
+            />
           </div>
+          
           <button onClick={() => sendMessage()}
             disabled={!input.trim() || loading}
             className="p-3 rounded-xl shadow-lg transition-all active:scale-95 shrink-0 disabled:opacity-40"

@@ -32,6 +32,7 @@ export const Sidebar = ({ activeTab, setActiveTab, onLogout }: SidebarProps) => 
     {
       label: 'Main',
       items: [
+        { id: 'search', icon: Search, label: 'Legal Search' },
         { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { id: 'diary', icon: Calendar, label: 'Legal Diary', badge: todayCount > 0 ? todayCount : null },
         { id: 'cases', icon: Briefcase, label: 'Cases', badge: urgentCount > 0 ? urgentCount : null, badgeColor: 'bg-red-500' },

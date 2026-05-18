@@ -1,10 +1,12 @@
 import React from 'react';
 import {
   FileText, Download, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, Printer,
-  addMonths, subMonths
+  ChevronLeft, ChevronRight, Printer
 } from 'lucide-react';
-import { format, addDays, isSameDay, startOfMonth, endOfMonth, startOfWeek, isWithinInterval, addMonths as addM, subMonths as subM } from 'date-fns';
+import {
+  format, addDays, isSameDay, startOfMonth, endOfMonth,
+  addMonths, subMonths, isWithinInterval
+} from 'date-fns';
 import { storage } from '../lib/storage';
 import { pdfGenerator } from '../lib/pdf';
 import { cn } from '../lib/utils';
@@ -18,30 +20,37 @@ export const CauseListView = () => {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const [cases, setCases] = React.useState(storage.getCases());
   const [downloading, setDownloading] = React.useState(false);
-  const [view, setView] = React.useState<'daily'|'monthly'>('daily');
-  const [selectedCase, setSelectedCase] = React.useState<LegalCase | null>(null);
+  const [view, setView] = React.useState<'daily' | 'monthly'>('daily');
+  const [openCase, setOpenCase] = React.useState<LegalCase | null>(null);
 
   React.useEffect(() => {
-    const handleUpdate = () => setCases(storage.getCases());
-    window.addEventListener('storage_update', handleUpdate);
-    return () => window.removeEventListener('storage_update', handleUpdate);
+    const refresh = () => setCases(storage.getCases());
+    window.addEventListener('storage_update', refresh);
+    return () => window.removeEventListener('storage_update', refresh);
   }, []);
 
-  const weekStart = startOfWeek(selectedDate);
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
-  const dayCases = cases.filter(c => c.nextDate === format(selectedDate, 'yyyy-MM-dd'));
+  const weekStart = (() => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - d.getDay());
+    return d;
+  })();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
+  const todayStr = format(selectedDate, 'yyyy-MM-dd');
+  const dayCases = cases.filter(c => c.nextDate === todayStr);
+
+  const mStart = startOfMonth(currentMonth);
+  const mEnd = endOfMonth(currentMonth);
   const monthlyCases = cases.filter(c => {
     if (!c.nextDate) return false;
     const d = new Date(c.nextDate + 'T00:00:00');
-    return isWithinInterval(d, { start: monthStart, end: monthEnd });
+    return isWithinInterval(d, { start: mStart, end: mEnd });
   });
 
   const displayCases = view === 'daily' ? dayCases : monthlyCases;
 
   const handleDownload = async () => {
+    if (displayCases.length === 0) return;
     setDownloading(true);
     const name = getSettings().advocateName || 'Advocate';
     try {
@@ -51,37 +60,45 @@ export const CauseListView = () => {
         await pdfGenerator.generateMonthlyCauseList(currentMonth, monthlyCases, name);
       }
     } finally {
-      setTimeout(() => setDownloading(false), 2000);
+      setTimeout(() => setDownloading(false), 3000);
     }
   };
 
+  const handlePrint = () => {
+    if (dayCases.length === 0 || view !== 'daily') return;
+    const name = getSettings().advocateName || 'Advocate';
+    pdfGenerator.printCauseList(format(selectedDate, 'yyyy-MM-dd'), dayCases, name);
+  };
+
   return (
-    <div className="p-4 md:p-8 space-y-5 flex flex-col h-full">
-      <header className="flex flex-wrap justify-between items-start gap-4">
+    <div className="p-4 md:p-8 flex flex-col gap-5 h-full">
+
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-start gap-3">
         <div>
           <h2 className="text-2xl md:text-3xl font-display font-bold">Cause List</h2>
-          <p className="text-zinc-500 text-sm">Tap any case to view details and forward date.</p>
+          <p className="text-zinc-500 text-sm">Case tap karein — details, next date forward, notes, fees.</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleDownload} disabled={displayCases.length === 0 || downloading}
-            className="flex items-center gap-2 px-4 py-2 bg-legal-green text-white rounded-xl font-bold shadow-lg shadow-legal-green/20 hover:opacity-90 disabled:opacity-40 text-sm">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={handleDownload}
+            disabled={displayCases.length === 0 || downloading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-legal-green text-white rounded-xl font-bold shadow-lg shadow-legal-green/20 hover:opacity-90 disabled:opacity-40 transition-all text-sm">
             <Download size={16} />
-            {downloading ? 'Downloading...' : `${view === 'daily' ? 'Daily' : 'Monthly'} PDF`}
+            {downloading ? 'Saving...' : `${view === 'daily' ? 'Daily' : 'Monthly'} PDF`}
           </button>
-          <button
-            onClick={() => view === 'daily' && pdfGenerator.printCauseList(format(selectedDate, 'yyyy-MM-dd'), dayCases, getSettings().advocateName || 'Advocate')}
+          <button onClick={handlePrint}
             disabled={dayCases.length === 0 || view !== 'daily'}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-40 text-sm">
+            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-40 transition-all text-sm">
             <Printer size={16} /> Print
           </button>
         </div>
-      </header>
+      </div>
 
       {/* View Toggle */}
       <div className="flex gap-1 p-1 bg-zinc-100 rounded-2xl w-fit">
         {(['daily', 'monthly'] as const).map(v => (
           <button key={v} onClick={() => setView(v)}
-            className={cn('px-5 py-2 rounded-xl text-sm font-bold transition-all capitalize',
+            className={cn('px-5 py-2 rounded-xl text-sm font-bold transition-all',
               view === v ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500')}>
             {v === 'daily' ? '📅 Daily' : '📆 Monthly'}
           </button>
@@ -91,47 +108,63 @@ export const CauseListView = () => {
       {/* Daily - Week Strip */}
       {view === 'daily' && (
         <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-zinc-100 shadow-sm">
-          <button onClick={() => setSelectedDate(addDays(selectedDate, -7))} className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronLeft size={18} /></button>
+          <button onClick={() => setSelectedDate(addDays(selectedDate, -7))}
+            className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+            <ChevronLeft size={18} />
+          </button>
           <div className="flex-1 grid grid-cols-7 gap-1">
             {weekDays.map(day => {
-              const count = cases.filter(c => c.nextDate === format(day, 'yyyy-MM-dd')).length;
+              const cnt = cases.filter(c => c.nextDate === format(day, 'yyyy-MM-dd')).length;
+              const sel = isSameDay(day, selectedDate);
               return (
                 <button key={day.toISOString()} onClick={() => setSelectedDate(day)}
                   className={cn('flex flex-col items-center py-2 rounded-xl transition-all',
-                    isSameDay(day, selectedDate) ? 'bg-legal-green text-white shadow-lg' : 'hover:bg-zinc-50 text-zinc-500')}>
-                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">{format(day, 'EEE')}</span>
+                    sel ? 'bg-legal-green text-white shadow-lg' : 'hover:bg-zinc-50 text-zinc-500')}>
+                  <span className="text-[9px] uppercase font-bold opacity-60">{format(day, 'EEE')}</span>
                   <span className="text-base font-display font-bold">{format(day, 'd')}</span>
-                  {count > 0 && <span className={cn('text-[9px] font-bold px-1.5 rounded-full mt-0.5', isSameDay(day, selectedDate) ? 'bg-white/20 text-white' : 'bg-legal-green/10 text-legal-green')}>{count}</span>}
+                  {cnt > 0 && (
+                    <span className={cn('text-[9px] font-bold px-1.5 rounded-full mt-0.5',
+                      sel ? 'bg-white/20 text-white' : 'bg-legal-green/10 text-legal-green')}>
+                      {cnt}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
-          <button onClick={() => setSelectedDate(addDays(selectedDate, 7))} className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronRight size={18} /></button>
+          <button onClick={() => setSelectedDate(addDays(selectedDate, 7))}
+            className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+            <ChevronRight size={18} />
+          </button>
         </div>
       )}
 
       {/* Monthly Navigation */}
       {view === 'monthly' && (
         <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm">
-          <button onClick={() => setCurrentMonth(subM(currentMonth, 1))} className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronLeft size={18} /></button>
+          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronLeft size={18} /></button>
           <div className="text-center">
             <p className="font-display font-bold text-lg">{format(currentMonth, 'MMMM yyyy')}</p>
             <p className="text-xs text-zinc-500">{monthlyCases.length} cases scheduled</p>
           </div>
-          <button onClick={() => setCurrentMonth(addM(currentMonth, 1))} className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronRight size={18} /></button>
+          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="p-2 hover:bg-zinc-100 rounded-xl"><ChevronRight size={18} /></button>
         </div>
       )}
 
-      {/* Cases */}
+      {/* Cases List */}
       <div className="flex-1 bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
-        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center">
+        <div className="p-4 border-b bg-zinc-50/50 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
-            <CalendarIcon className="text-legal-green" size={18} />
+            <CalendarIcon size={18} className="text-legal-green" />
             <h3 className="font-display font-bold">
               {view === 'daily' ? format(selectedDate, 'dd MMM yyyy') : format(currentMonth, 'MMMM yyyy')}
             </h3>
           </div>
-          <span className="bg-legal-green/10 text-legal-green text-xs font-bold px-3 py-1 rounded-full">{displayCases.length} Cases</span>
+          <span className="bg-legal-green/10 text-legal-green text-xs font-bold px-3 py-1 rounded-full">
+            {displayCases.length} Cases
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -139,40 +172,50 @@ export const CauseListView = () => {
             <div className="divide-y divide-zinc-100">
               {displayCases.map((c, i) => (
                 <motion.button key={c.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  onClick={() => setSelectedCase(c)}
-                  className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-zinc-50 transition-colors group">
-                  <div className="w-9 h-9 rounded-2xl bg-legal-green/10 flex items-center justify-center font-bold text-sm text-legal-green shrink-0">
+                  onClick={() => setOpenCase(c)}
+                  className="w-full text-left flex items-center gap-3 px-5 py-4 hover:bg-zinc-50 transition-colors group">
+
+                  <div className="w-9 h-9 rounded-xl bg-legal-green/10 flex items-center justify-center text-sm font-bold text-legal-green shrink-0">
                     {i + 1}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-zinc-900 text-sm leading-tight truncate">
                       {c.parties.plaintiff} <span className="text-zinc-400 font-normal">vs</span> {c.parties.defendant}
                     </p>
-                    <p className="text-xs text-zinc-400 mt-0.5 font-mono">{c.caseNumber} · {c.court.name}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5 font-mono truncate">
+                      {c.caseNumber} · {c.court.name}
+                    </p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className={cn('text-[10px] font-bold px-2 py-1 rounded-full',
+
+                  <div className="text-right shrink-0 space-y-1">
+                    <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full block',
                       c.status === 'Urgent' ? 'bg-red-50 text-red-500' : 'bg-zinc-100 text-zinc-500')}>
                       {c.status}
                     </span>
                     {view === 'monthly' && c.nextDate && (
-                      <p className="text-[10px] text-legal-green font-bold mt-1">
+                      <p className="text-[10px] text-legal-green font-bold">
                         {format(new Date(c.nextDate + 'T00:00:00'), 'dd MMM')}
                       </p>
                     )}
                   </div>
-                  <ChevronRight size={16} className="text-zinc-200 group-hover:text-zinc-400 transition-colors shrink-0" />
+
+                  <ChevronRight size={15} className="text-zinc-200 group-hover:text-legal-green transition-colors shrink-0" />
                 </motion.button>
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-16 text-center">
-              <FileText size={32} className="text-zinc-200 mb-3" />
-              <h3 className="font-display font-bold">No Cases</h3>
-              <p className="text-zinc-400 text-sm mt-1">{view === 'daily' ? 'No hearing on this date.' : 'No cases this month.'}</p>
+              <div className="w-14 h-14 bg-zinc-50 rounded-full flex items-center justify-center mb-3">
+                <FileText size={28} className="text-zinc-200" />
+              </div>
+              <h3 className="font-display font-bold text-zinc-700">Koi Case Nahi</h3>
+              <p className="text-zinc-400 text-sm mt-1">
+                {view === 'daily' ? 'Is date par koi hearing nahi hai.' : 'Is mahine koi case schedule nahi.'}
+              </p>
             </div>
           )}
         </div>
@@ -180,10 +223,13 @@ export const CauseListView = () => {
 
       {/* Case Detail Modal */}
       <AnimatePresence>
-        {selectedCase && (
+        {openCase && (
           <CaseDetail
-            legalCase={selectedCase}
-            onClose={() => { setSelectedCase(null); setCases(storage.getCases()); }}
+            legalCase={openCase}
+            onClose={() => {
+              setOpenCase(null);
+              setCases(storage.getCases());
+            }}
           />
         )}
       </AnimatePresence>

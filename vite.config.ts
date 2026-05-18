@@ -30,17 +30,18 @@ export default defineConfig(({ mode }) => {
       })
     ],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      // डुप्लिकेट हटा दिया गया है
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.API_KEY),
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        // इसे 'src' डायरेक्टरी पर पॉइंट कर दिया गया है (यदि आपका कोड src में है)
+        '@': path.resolve(__dirname, './src'),
       },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},

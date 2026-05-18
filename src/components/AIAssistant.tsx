@@ -61,10 +61,13 @@ export const AIAssistant = () => {
   }, [messages, loading]);
 
   React.useEffect(() => {
-    const key = getApiKey();
-    if (!key) setApiKeyMissing(true);
-  }, []);
-
+    const getApiKey = (): string => {
+  const key =
+    (typeof process !== 'undefined' && (process.env as any)?.GEMINI_API_KEY) ||
+    (window as any).__GEMINI_API_KEY__ ||
+    '';
+  return key;
+};
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;

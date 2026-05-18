@@ -9,17 +9,18 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: false,
   },
+  server: {
+    androidScheme: 'https',
+    allowNavigation: [
+      'generativelanguage.googleapis.com',
+      '*.googleapis.com',
+    ],
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
       backgroundColor: '#0a0f1e',
       showSpinner: false,
-    },
-    Filesystem: {
-      androidPermissions: [
-        'android.permission.READ_EXTERNAL_STORAGE',
-        'android.permission.WRITE_EXTERNAL_STORAGE',
-      ],
     },
   },
 };

@@ -1,5 +1,49 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="128" fill="#15803d"/>
-  <path d="M128 384H384M256 128V384M176 184C176 184 128 192 128 256C128 320 176 328 176 328M336 184C336 184 384 192 384 256C384 320 336 328 336 328" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M256 128L176 184M256 128L336 184" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="legalBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#031E14" />
+      <stop offset="50%" stop-color="#063321" />
+      <stop offset="100%" stop-color="#0B4E33" />
+    </linearGradient>
+    
+    <linearGradient id="premiumGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3B3" />
+      <stop offset="30%" stop-color="#D1A13B" />
+      <stop offset="70%" stop-color="#A3761A" />
+      <stop offset="100%" stop-color="#F2C968" />
+    </linearGradient>
+    
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="10" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="120" fill="url(#legalBg)"/>
+  
+  <rect x="22" y="22" width="468" height="468" rx="98" fill="none" stroke="url(#premiumGold)" stroke-width="4" opacity="0.35"/>
+
+  <g filter="url(#dropShadow)">
+    <path d="M256 120 V380" stroke="url(#premiumGold)" stroke-width="16" stroke-linecap="round"/>
+    
+    <path d="M200 380 H312" stroke="url(#premiumGold)" stroke-width="16" stroke-linecap="round"/>
+    <path d="M170 396 H342" stroke="url(#premiumGold)" stroke-width="12" stroke-linecap="round"/>
+    
+    <path d="M232 116 H280" stroke="url(#premiumGold)" stroke-width="16" stroke-linecap="round"/>
+    
+    <path d="M120 170 C 180 142, 332 142, 392 170" fill="none" stroke="url(#premiumGold)" stroke-width="14" stroke-linecap="round"/>
+    
+    <g id="left-scale">
+      <path d="M120 170 L85 260" stroke="url(#premiumGold)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M120 170 L155 260" stroke="url(#premiumGold)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M75 260 H165" stroke="url(#premiumGold)" stroke-width="10" stroke-linecap="round"/>
+      <path d="M85 260 C85 305, 155 305, 155 260" fill="none" stroke="url(#premiumGold)" stroke-width="8" stroke-linecap="round"/>
+    </g>
+
+    <g id="right-scale">
+      <path d="M392 170 L357 260" stroke="url(#premiumGold)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M392 170 L427 260" stroke="url(#premiumGold)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M347 260 H437" stroke="url(#premiumGold)" stroke-width="10" stroke-linecap="round"/>
+      <path d="M357 260 C357 305, 427 305, 427 260" fill="none" stroke="url(#premiumGold)" stroke-width="8" stroke-linecap="round"/>
+    </g>
+  </g>
 </svg>

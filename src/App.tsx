@@ -16,6 +16,7 @@ import { LegalCase } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Database } from 'lucide-react';
 import { format } from 'date-fns';
+import { LegalSearch } from './components/LegalSearch';
 
 const SESSION_KEY = 'ld_session';
 
@@ -68,6 +69,7 @@ React.useEffect(() => {
       case 'calculator': return <LegalCalculator />;
       case 'card': return <AdvocateCard />;
       case 'settings': return <Settings />;
+      case 'search': return <LegalSearch />;
       default: return (
         <div className="flex flex-col items-center justify-center h-full p-20 text-center">
           <h2 className="text-2xl font-display font-bold">Coming Soon</h2>

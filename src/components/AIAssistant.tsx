@@ -62,7 +62,7 @@ export const AIAssistant = () => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const sendMessage = async (text?: string) => 
+  const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;
     

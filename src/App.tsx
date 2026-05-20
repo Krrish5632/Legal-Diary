@@ -15,7 +15,6 @@ import { HearingNotes } from './components/HearingNotes';
 import { LegalSearch } from './components/LegalSearch';
 import { JudgmentSearch } from './components/JudgmentSearch';
 import { ClientDatabase } from './components/ClientDatabase';
-import { VakalatnaMGenerator } from './components/VakalatnaMGenerator';
 import { LegalNotices } from './components/LegalNotices';
 import { IncomeTracker } from './components/IncomeTracker';
 import { LegalCase } from './types';
@@ -61,7 +60,6 @@ export default function App() {
       case 'search':       return <LegalSearch />;
       case 'judgments':    return <JudgmentSearch />;
       case 'clients':      return <ClientDatabase />;
-      case 'vakalatnama':  return <VakalatnaMGenerator />;
       case 'notices':      return <LegalNotices />;
       case 'income':       return <IncomeTracker />;
       case 'settings':     return <Settings />;

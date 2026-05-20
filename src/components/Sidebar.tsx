@@ -37,7 +37,6 @@ export const Sidebar = ({ activeTab, setActiveTab, onLogout }: Props) => {
     {
       label: 'AI & Tools',
       items: [
-        { id: 'ai', icon: Bot, label: 'AI Assistant', isAI: true },
         { id: 'search', icon: Search, label: 'Legal Search' },
         { id: 'judgments', icon: BookMarked, label: 'Judgments' },
         { id: 'calculator', icon: Calculator, label: 'Legal Calculator' },

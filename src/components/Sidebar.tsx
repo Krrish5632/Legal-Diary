@@ -46,7 +46,6 @@ export const Sidebar = ({ activeTab, setActiveTab, onLogout }: Props) => {
     {
       label: 'Documents',
       items: [
-        { id: 'vakalatnama', icon: FileText, label: 'Vakalatnama' },
         { id: 'notices', icon: Mail, label: 'Legal Notices' },
       ]
     },

@@ -7,7 +7,6 @@ import { CauseListView } from './components/CauseListView';
 import { Settings } from './components/Settings';
 import { CaseForm } from './components/CaseForm';
 import { Login } from './components/Login';
-import { AIAssistant } from './components/AIAssistant';
 import { Analytics } from './components/Analytics';
 import { LegalCalculator } from './components/LegalCalculator';
 import { AdvocateCard } from './components/AdvocateCard';
@@ -53,7 +52,6 @@ export default function App() {
       case 'cases':        return <CaseList onAddCase={() => { setSelectedCase(undefined); setIsFormOpen(true); }} onEditCase={(c) => { setSelectedCase(c); setIsFormOpen(true); }} onViewNotes={(c) => setNotesCase(c)} />;
       case 'diary':        return <Diary onAddCase={() => { setSelectedCase(undefined); setIsFormOpen(true); }} />;
       case 'causelist':    return <CauseListView />;
-      case 'ai':           return <AIAssistant />;
       case 'analytics':    return <Analytics />;
       case 'calculator':   return <LegalCalculator />;
       case 'card':         return <AdvocateCard />;
@@ -83,10 +81,6 @@ export default function App() {
             <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-[9px] font-bold uppercase">
               <Shield size={9} /> Secure
             </span>
-            {activeTab === 'ai' && (
-              <span className="px-2.5 py-1 rounded-full text-[9px] font-bold uppercase"
-                style={{ background:'rgba(124,58,237,0.1)', color:'#7c3aed' }}>✨ AI</span>
-            )}
           </div>
           <p className="text-[11px] font-bold text-zinc-400">{format(new Date(), 'EEE, dd MMM yyyy')}</p>
         </div>

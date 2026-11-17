@@ -1,0 +1,28 @@
+.app .content { padding-bottom: 92px; }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #0B1F3A; border-top: 2px solid #C9A227; z-index: 5; }
+.nav button { flex: 1; background: none; border: 0; color: #B8C4D9; padding: 14px 2px; font-size: 12px; cursor: pointer; }
+.nav button.active { color: #fff; font-weight: 700; box-shadow: inset 0 3px 0 #C9A227; }
+.p3-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+.p3-stat { background: #fff; border: 1px solid #D9DEE8; border-radius: 10px; padding: 12px; }
+.p3-stat.warn { border-color: #C0392B; }
+.p3-num { font-size: 26px; font-weight: 700; color: #0B1F3A; }
+.p3-stat.warn .p3-num { color: #C0392B; }
+.p3-lab { font-size: 12px; color: #5B6678; }
+.p3-sec { margin: 16px 0 6px; font-size: 15px; color: #0B1F3A; }
+.p3-search { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+.p3-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+.p3-filters select { flex: 1; min-width: 110px; }
+.p3-check { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.p3-more { text-align: center; margin: 12px 0; }
+.p3-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; }
+.p3-bar-label { width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p3-bar-track { flex: 1; background: #E8ECF3; border-radius: 6px; height: 12px; }
+.p3-bar-fill { background: #1F4FBF; height: 12px; border-radius: 6px; }
+.p3-bar-n { width: 28px; text-align: right; font-weight: 700; }
+.p3-entry { margin: 8px 0; padding: 10px; border: 1px solid #D9DEE8; border-radius: 10px; background: #fff; }
+.p3-entry .pre { white-space: pre-wrap; }
+.p3-pre { white-space: pre-wrap; margin: 6px 0; }
+.p3-scroll { max-height: 260px; overflow-y: auto; }
+.p3-sug { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #E8ECF3; font-size: 13px; }
+.p3-gap { margin-top: 10px; }
+/* end of nav.css */

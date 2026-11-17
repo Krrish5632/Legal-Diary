@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.core.json",
+  "compilerOptions": { "noEmit": true },
+  "include": [],
+  "files": ["src/core/remindersync.ts"]
+}
+// end of tsconfig.reminders.json

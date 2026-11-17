@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.core.json",
+  "files": [
+    "src/core/dates.ts",
+    "src/core/types.ts",
+    "src/core/migrate.ts",
+    "src/core/hearing.ts",
+    "src/core/repository.ts",
+    "src/core/importer.ts",
+    "src/core/indexeddb.ts",
+    "src/core/actions.ts",
+    "src/core/caseedit.ts",
+    "src/core/clients.ts",
+    "src/core/stats.ts",
+    "src/core/backup.ts",
+    "src/core/search.ts",
+    "src/core/reminders.ts",
+    "src/core/documents.ts",
+    "src/core/filestore.ts",
+    "src/core/zip.ts",
+    "src/core/backupzip.ts"
+  ]
+}
+// end of tsconfig.check.json

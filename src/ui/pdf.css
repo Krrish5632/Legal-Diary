@@ -1,0 +1,28 @@
+.pdfbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+.pdfbtn {
+  border: 1px solid #c9d2e3;
+  background: #fff;
+  color: #0b1f3a;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pdfbtn:hover {
+  background: #f0f3f8;
+}
+.pdfmsg {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #3b4a63;
+}
+.pdfbad {
+  color: #b42318;
+}
+/* end of pdf.css */

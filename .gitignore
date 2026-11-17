@@ -6,3 +6,21 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Work files - never upload
+bundle.txt
+two.txt
+tsc_out.txt
+all_src.txt
+cfg_all.txt
+ui_files.txt
+.bak_unpack/
+
+# Secrets and client data - never upload
+*.jks
+*.keystore
+key.properties
+google-services.json
+clean_export*.json
+*.tar
+# end of .gitignore

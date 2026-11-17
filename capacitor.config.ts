@@ -5,16 +5,11 @@ const config: CapacitorConfig = {
   appName: 'Legal Diary Pro',
   webDir: 'dist',
   android: {
-    allowMixedContent: true,
     captureInput: true,
     webContentsDebuggingEnabled: false,
   },
   server: {
     androidScheme: 'https',
-    allowNavigation: [
-      'generativelanguage.googleapis.com',
-      '*.googleapis.com',
-    ],
   },
   plugins: {
     SplashScreen: {
@@ -26,3 +21,4 @@ const config: CapacitorConfig = {
 };
 
 export default config;
+// end of capacitor.config.ts

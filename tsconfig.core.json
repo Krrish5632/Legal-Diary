@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": []
+  },
+  "files": [
+    "src/core/dates.ts",
+    "src/core/types.ts",
+    "src/core/migrate.ts",
+    "src/core/hearing.ts",
+    "src/core/repository.ts",
+    "src/core/importer.ts",
+    "src/core/indexeddb.ts",
+    "src/core/actions.ts"
+  ]
+}

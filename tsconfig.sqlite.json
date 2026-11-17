@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.core.json",
+  "compilerOptions": { "noEmit": true },
+  "include": [],
+  "files": ["src/core/sqlite.ts", "src/core/repocopy.ts"]
+}
+// end of tsconfig.sqlite.json

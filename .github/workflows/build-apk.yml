@@ -1,13 +1,19 @@
 name: Build Android APK
 
+# Legal Diary Pro - TEST build.
+# Runs only for the pro-test branch (and by hand). It never runs for main.
 on:
   push:
-    branches: [ main ]
+    branches: [ pro-test ]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -24,34 +30,38 @@ jobs:
           distribution: 'temurin'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci || npm install --legacy-peer-deps
 
-      - name: Build Project
+      - name: Check types
+        run: npm run lint
+
+      - name: Run tests (information only)
+        continue-on-error: true
+        run: npx vitest run
+
+      - name: Build web app
         run: npm run build
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Sync Capacitor
-        run: |
-          npx cap add android || true
-          npx cap sync android
+        run: npx cap sync android
 
-      - name: Grant permissions in Manifest
+      - name: Build TEST APK
+        working-directory: android
         run: |
-          sed -i 's|</manifest>|<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/><uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/><uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/></manifest>|' android/app/src/main/AndroidManifest.xml
-
-      - name: Build APK
-        run: |
-          cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleTrialDebug -Pvcode=${{ github.run_number }} --stacktrace
+
+      - name: List APK
+        run: ls -l android/app/build/outputs/apk/trial/debug/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LegalDiaryPro-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: LegalDiaryPro-TEST-APK
+          path: android/app/build/outputs/apk/trial/debug/app-trial-debug.apk
+          if-no-files-found: error
           retention-days: 30
+# end of build-apk.yml

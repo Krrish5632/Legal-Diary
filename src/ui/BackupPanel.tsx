@@ -9,13 +9,26 @@ import type { ZipBackup, ZipPreview } from '../core/backupzip';
 import { repo } from './store';
 import { fileStore } from './docstore';
 import { fmt, nowIST } from './dateutil';
-import { downloadBytes, downloadTextFile } from './files';
+import { downloadBytes, downloadTextFile, lastSaveError } from './files';
+import type { SaveOutcome } from './files';
 
 interface PendingJson { kind: 'json'; file: BackupFile; preview: RestorePreview }
 interface PendingZip { kind: 'zip'; zip: ZipBackup; preview: ZipPreview }
 type Pending = PendingJson | PendingZip;
 
 const msgOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+// Throws unless the file was really saved, so nothing is reported as done by mistake.
+function needSaved(outcome: SaveOutcome, what: string): void {
+  if (outcome === 'saved') return;
+  if (outcome === 'cancelled') {
+    throw new Error(
+      'The ' + what + ' was not saved because the Save screen was closed. Nothing was changed.',
+    );
+  }
+  const d = lastSaveError();
+  throw new Error('The ' + what + ' could not be saved.' + (d ? ' ' + d : '') + ' Nothing was changed.');
+}
 
 export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onChanged: () => Promise<void> }) {
   const [counts, setCounts] = useState<{ cases: number; hearings: number; audit: number } | null>(null);
@@ -40,7 +53,8 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
   async function saveJson(prefix: string): Promise<BackupFile> {
     const now = nowIST();
     const b = await createBackup(repo, now);
-    downloadTextFile(prefix + backupFileName(now), serializeBackup(b));
+    const outcome = await downloadTextFile(prefix + backupFileName(now), serializeBackup(b));
+    needSaved(outcome, prefix === '' ? 'backup file' : 'safety backup');
     await repo.commit({ setMeta: { last_backup_at: now } });
     return b;
   }
@@ -48,7 +62,10 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
   async function saveZip(prefix: string) {
     const now = nowIST();
     const r = await createZipBackup(repo, fileStore, now);
-    downloadBytes(prefix + backupFileName(now).replace(/\.json$/, '.zip'), r.zip, 'application/zip');
+    const outcome = await downloadBytes(
+      prefix + backupFileName(now).replace(/\.json$/, '.zip'), r.zip, 'application/zip',
+    );
+    needSaved(outcome, prefix === '' ? 'backup file' : 'safety backup');
     await repo.commit({ setMeta: { last_backup_at: now } });
     return r;
   }
@@ -59,7 +76,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
     try {
       const r = await saveZip('');
       setMsg(
-        'Backup file created: ' + r.counts.cases + ' cases, ' + r.counts.hearings + ' hearings, ' +
+        'Backup file saved: ' + r.counts.cases + ' cases, ' + r.counts.hearings + ' hearings, ' +
         r.counts.documents + ' documents.',
       );
       if (r.skipped.length > 0) {
@@ -81,7 +98,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
     setBusy(true); setErr(''); setMsg(''); setWarn('');
     try {
       const b = await saveJson('');
-      setMsg('Data-only backup created: ' + b.counts.cases + ' cases, ' + b.counts.hearings + ' hearings. Documents are not in this file.');
+      setMsg('Data-only backup saved: ' + b.counts.cases + ' cases, ' + b.counts.hearings + ' hearings. Documents are not in this file.');
       await refresh();
     } catch (e) {
       setErr('Backup failed: ' + msgOf(e));
@@ -167,7 +184,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
         <div className="note">
           The backup file has built-in checks, so a damaged or changed file is refused at restore.
           It holds client information and documents: keep copies in a safe place and do not share it.
-          Do not edit anything inside it. Saving to a phone folder is added in the Android step.
+          Do not edit anything inside it. On the phone, a Save screen opens: choose a folder such as Downloads or Documents.
         </div>
 
         <h4>Restore</h4>

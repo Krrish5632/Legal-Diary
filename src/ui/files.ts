@@ -3,19 +3,29 @@
 // picker (SaveFile plugin). If that is not available, fall back to the Share menu.
 // Browser: normal download link.
 
+export type SaveOutcome = 'saved' | 'cancelled' | 'failed';
+
 type SaveFileResult = { saved: boolean; uri?: string };
 type SaveFilePlugin = {
   save(o: { name: string; path: string; mime: string }): Promise<SaveFileResult>;
 };
 
 let saveFilePlugin: SaveFilePlugin | null = null;
+let lastError = '';
 
-async function getSaveFile(): Promise<SaveFilePlugin> {
+export function lastSaveError(): string {
+  return lastError;
+}
+
+// IMPORTANT: a Capacitor plugin object must never be returned straight from an
+// async function (the promise would call plugin.then() and hang). So it is
+// wrapped in a plain object.
+async function getSaveFile(): Promise<{ plugin: SaveFilePlugin }> {
   if (!saveFilePlugin) {
     const core = await import('@capacitor/core');
     saveFilePlugin = core.registerPlugin<SaveFilePlugin>('SaveFile');
   }
-  return saveFilePlugin;
+  return { plugin: saveFilePlugin };
 }
 
 async function isNative(): Promise<boolean> {
@@ -107,27 +117,31 @@ async function nativeShare(name: string, uri: string): Promise<'shared' | 'cance
   }
 }
 
-async function nativeSave(name: string, bytes: Uint8Array, mime: string): Promise<void> {
+async function nativeSave(name: string, bytes: Uint8Array, mime: string): Promise<SaveOutcome> {
   try {
     const uri = await writeToCache(name, bytes);
-    const plugin = await getSaveFile();
+    const holder = await getSaveFile();
     let res: SaveFileResult;
     try {
-      res = await plugin.save({ name: safeName(name), path: uri, mime });
+      res = await holder.plugin.save({ name: safeName(name), path: uri, mime });
     } catch (e) {
       const m = errText(e);
       if (/not implemented|not available|unimplemented/i.test(m)) {
         // Save-as screen not available: fall back to the Share menu.
-        await nativeShare(name, uri);
-        return;
+        const r = await nativeShare(name, uri);
+        return r === 'shared' ? 'saved' : 'cancelled';
       }
       throw e;
     }
     if (res.saved) {
       toast('Saved: ' + safeName(name), false);
+      return 'saved';
     }
+    return 'cancelled';
   } catch (e) {
-    toast('Could not save ' + name + ': ' + errText(e), true);
+    lastError = errText(e);
+    toast('Could not save ' + name + ': ' + lastError, true);
+    return 'failed';
   }
 }
 
@@ -144,17 +158,23 @@ function browserDownload(name: string, bytes: Uint8Array, mime: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-export async function downloadBytes(name: string, bytes: Uint8Array, mime?: string): Promise<void> {
+export async function downloadBytes(name: string, bytes: Uint8Array, mime?: string): Promise<SaveOutcome> {
   const m = mimeFromName(name, mime);
+  lastError = '';
   if (await isNative()) {
-    await nativeSave(name, bytes, m);
-    return;
+    return nativeSave(name, bytes, m);
   }
-  browserDownload(name, bytes, m);
+  try {
+    browserDownload(name, bytes, m);
+    return 'saved';
+  } catch (e) {
+    lastError = errText(e);
+    return 'failed';
+  }
 }
 
-export async function downloadTextFile(name: string, text: string, mime?: string): Promise<void> {
-  await downloadBytes(name, new TextEncoder().encode(text), mime);
+export async function downloadTextFile(name: string, text: string, mime?: string): Promise<SaveOutcome> {
+  return downloadBytes(name, new TextEncoder().encode(text), mime);
 }
 
 export async function shareBytes(

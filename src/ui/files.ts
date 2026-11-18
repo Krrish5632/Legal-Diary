@@ -1,78 +1,105 @@
-/**
- * Saving and sharing files.
- * Browser: normal download link.
- * Phone app: the file is written to the app's private cache and the Android
- * share menu opens, so the user can save it to Drive, Files, etc.
- * (No storage permission is needed.)
- */
+// File saving helpers.
+// Phone (Capacitor): write to the app cache, then open Android's "Save as"
+// picker (SaveFile plugin). If that is not available, fall back to the Share menu.
+// Browser: normal download link.
 
-const TOAST_ID = 'ld-save-toast';
+type SaveFileResult = { saved: boolean; uri?: string };
+type SaveFilePlugin = {
+  save(o: { name: string; path: string; mime: string }): Promise<SaveFileResult>;
+};
 
-function toast(text: string, bad: boolean): void {
-  if (typeof document === 'undefined') return;
-  const found = document.getElementById(TOAST_ID);
-  const node: HTMLElement = found ?? document.body.appendChild(document.createElement('div'));
-  node.id = TOAST_ID;
-  node.setAttribute('role', 'alert');
-  node.style.cssText =
-    'position:fixed;left:12px;right:12px;bottom:84px;z-index:99999;padding:12px 14px;' +
-    'border-radius:10px;font-size:15px;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);' +
-    'background:' + (bad ? '#b42318' : '#0f2a5c');
-  node.textContent = text;
-  window.setTimeout(() => {
-    if (node.textContent === text) node.remove();
-  }, bad ? 15000 : 4000);
-}
+let saveFilePlugin: SaveFilePlugin | null = null;
 
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+async function getSaveFile(): Promise<SaveFilePlugin> {
+  if (!saveFilePlugin) {
+    const core = await import('@capacitor/core');
+    saveFilePlugin = core.registerPlugin<SaveFilePlugin>('SaveFile');
+  }
+  return saveFilePlugin;
 }
 
 async function isNative(): Promise<boolean> {
   try {
-    const { Capacitor } = await import('@capacitor/core');
-    return Capacitor.isNativePlatform();
+    const core = await import('@capacitor/core');
+    return core.Capacitor.isNativePlatform();
   } catch {
     return false;
   }
 }
 
+function mimeFromName(name: string, given?: string): string {
+  if (given && given.length > 0) return given;
+  const n = name.toLowerCase();
+  if (n.endsWith('.json')) return 'application/json';
+  if (n.endsWith('.zip')) return 'application/zip';
+  if (n.endsWith('.pdf')) return 'application/pdf';
+  if (n.endsWith('.txt')) return 'text/plain';
+  if (n.endsWith('.csv')) return 'text/csv';
+  if (n.endsWith('.png')) return 'image/png';
+  if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
+function toast(text: string, isError: boolean): void {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('.ld-save-toast').forEach((n) => n.remove());
+  const d = document.createElement('div');
+  d.className = 'ld-save-toast';
+  d.setAttribute('role', 'status');
+  d.textContent = text;
+  d.style.cssText =
+    'position:fixed;left:12px;right:12px;bottom:84px;z-index:99999;padding:12px 14px;' +
+    'border-radius:10px;color:#fff;font-size:14px;line-height:1.35;' +
+    'box-shadow:0 4px 14px rgba(0,0,0,.3);background:' +
+    (isError ? '#b42318' : '#0b6b3a');
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), isError ? 15000 : 6000);
+}
+
+function safeName(name: string): string {
+  const s = name.replace(/[^A-Za-z0-9._-]+/g, '_');
+  return s.length > 0 ? s : 'file';
+}
+
+function errText(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return 'unknown error';
+  }
+}
+
 function toBase64(bytes: Uint8Array): string {
   let bin = '';
-  const step = 0x8000;
-  for (let i = 0; i < bytes.length; i += step) {
-    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + step)));
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH) as unknown as number[]);
   }
   return btoa(bin);
 }
 
-function safeName(name: string): string {
-  const s = name.replace(/[^A-Za-z0-9._-]/g, '_');
-  return s.length > 0 ? s : 'file';
-}
-
-/** Phone: write to cache, open the share menu. */
-async function nativeShare(name: string, bytes: Uint8Array): Promise<'shared' | 'cancelled'> {
+async function writeToCache(name: string, bytes: Uint8Array): Promise<string> {
   const { Filesystem, Directory } = await import('@capacitor/filesystem');
-  const { Share } = await import('@capacitor/share');
-  // Remove files left from earlier saves so client data does not pile up in the cache.
   try {
     await Filesystem.rmdir({ path: 'exports', directory: Directory.Cache, recursive: true });
   } catch {
-    /* nothing to remove */
+    // folder did not exist - fine
   }
-  const written = await Filesystem.writeFile({
-    path: 'exports/' + String(Date.now()) + '/' + safeName(name),
+  const r = await Filesystem.writeFile({
+    path: 'exports/' + Date.now() + '/' + safeName(name),
     data: toBase64(bytes),
     directory: Directory.Cache,
     recursive: true,
   });
+  return r.uri;
+}
+
+async function nativeShare(name: string, uri: string): Promise<'shared' | 'cancelled'> {
+  const { Share } = await import('@capacitor/share');
   try {
-    await Share.share({
-      title: name,
-      dialogTitle: 'Save or send ' + name,
-      files: [written.uri],
-    });
+    await Share.share({ title: name, dialogTitle: 'Send ' + name, files: [uri] });
     return 'shared';
   } catch (e) {
     if (/cancel/i.test(errText(e))) return 'cancelled';
@@ -80,7 +107,33 @@ async function nativeShare(name: string, bytes: Uint8Array): Promise<'shared' | 
   }
 }
 
-function saveBlob(name: string, blob: Blob): void {
+async function nativeSave(name: string, bytes: Uint8Array, mime: string): Promise<void> {
+  try {
+    const uri = await writeToCache(name, bytes);
+    const plugin = await getSaveFile();
+    let res: SaveFileResult;
+    try {
+      res = await plugin.save({ name: safeName(name), path: uri, mime });
+    } catch (e) {
+      const m = errText(e);
+      if (/not implemented|not available|unimplemented/i.test(m)) {
+        // Save-as screen not available: fall back to the Share menu.
+        await nativeShare(name, uri);
+        return;
+      }
+      throw e;
+    }
+    if (res.saved) {
+      toast('Saved: ' + safeName(name), false);
+    }
+  } catch (e) {
+    toast('Could not save ' + name + ': ' + errText(e), true);
+  }
+}
+
+function browserDownload(name: string, bytes: Uint8Array, mime: string): void {
+  if (typeof document === 'undefined') return;
+  const blob = new Blob([bytes as unknown as BlobPart], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -88,55 +141,50 @@ function saveBlob(name: string, blob: Blob): void {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-async function saveBytes(name: string, bytes: Uint8Array, mime: string): Promise<void> {
-  try {
-    if (await isNative()) {
-      await nativeShare(name, bytes);
-      return;
-    }
-    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: mime || 'application/octet-stream' });
-    saveBlob(name, blob);
-  } catch (e) {
-    toast('Could not save ' + name + ': ' + errText(e), true);
+export async function downloadBytes(name: string, bytes: Uint8Array, mime?: string): Promise<void> {
+  const m = mimeFromName(name, mime);
+  if (await isNative()) {
+    await nativeSave(name, bytes, m);
+    return;
   }
+  browserDownload(name, bytes, m);
 }
 
-/** Saves a text file (browser download, or the share menu on the phone). */
-export function downloadTextFile(name: string, text: string, mime = 'application/json'): void {
-  void saveBytes(name, new TextEncoder().encode(text), mime);
+export async function downloadTextFile(name: string, text: string, mime?: string): Promise<void> {
+  await downloadBytes(name, new TextEncoder().encode(text), mime);
 }
 
-/** Saves a binary file (a document, a PDF). */
-export function downloadBytes(name: string, bytes: Uint8Array, mime: string): void {
-  void saveBytes(name, bytes, mime);
-}
-
-/** Opens the system share sheet. */
 export async function shareBytes(
   name: string,
   bytes: Uint8Array,
-  mime: string,
+  mime?: string,
 ): Promise<'shared' | 'cancelled' | 'unsupported'> {
+  const m = mimeFromName(name, mime);
   if (await isNative()) {
-    return nativeShare(name, bytes);
-  }
-  const file = new File([bytes.slice().buffer as ArrayBuffer], name, { type: mime || 'application/octet-stream' });
-  if (
-    typeof navigator.share !== 'function' ||
-    typeof navigator.canShare !== 'function' ||
-    !navigator.canShare({ files: [file] })
-  ) {
-    return 'unsupported';
+    try {
+      const uri = await writeToCache(name, bytes);
+      return await nativeShare(name, uri);
+    } catch (e) {
+      toast('Could not share ' + name + ': ' + errText(e), true);
+      return 'cancelled';
+    }
   }
   try {
-    await navigator.share({ files: [file], title: name });
+    const nav = navigator as Navigator & {
+      canShare?: (d: ShareData) => boolean;
+    };
+    const file = new File([bytes as unknown as BlobPart], name, { type: m });
+    if (typeof nav.share !== 'function' || !nav.canShare || !nav.canShare({ files: [file] })) {
+      return 'unsupported';
+    }
+    await nav.share({ files: [file], title: name });
     return 'shared';
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';
-    throw e;
+    return 'unsupported';
   }
 }
 // end of files.ts

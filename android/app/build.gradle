@@ -3,6 +3,11 @@ apply plugin: 'com.android.application'
 // versionCode comes from the build server (run number) so it always grows.
 def vcode = project.hasProperty('vcode') ? project.property('vcode').toInteger() : 1
 
+// Signing key for the real (live) app. It is read from environment variables
+// that only exist on the build server. Nothing secret is stored in this file.
+def ldStoreFile = System.getenv("LD_KEYSTORE_FILE")
+def ldStorePass = System.getenv("LD_KEYSTORE_PASSWORD")
+
 android {
     namespace = "com.legaldiary.pro"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -19,6 +24,16 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        live {
+            if (ldStoreFile) {
+                storeFile file(ldStoreFile)
+                storePassword ldStorePass
+                keyAlias "legaldiary"
+                keyPassword ldStorePass
+            }
+        }
+    }
     flavorDimensions "channel"
     productFlavors {
         // trial = separate TEST app, installs beside the old app
@@ -27,7 +42,7 @@ android {
             applicationIdSuffix ".test"
             versionNameSuffix "-test"
         }
-        // live = the real app id (not built yet)
+        // live = the real app id
         live {
             dimension "channel"
         }
@@ -36,6 +51,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (ldStoreFile) {
+                signingConfig signingConfigs.live
+            }
         }
     }
 }

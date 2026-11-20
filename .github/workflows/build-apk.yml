@@ -1,6 +1,6 @@
 name: Build Android APK
 
-# Legal Diary Pro - TEST build.
+# Legal Diary Pro - TEST build, plus the signed LIVE build when the key secrets exist.
 # Runs only for the pro-test branch (and by hand). It never runs for main.
 on:
   push:
@@ -14,7 +14,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +67,35 @@ jobs:
         with:
           name: LegalDiaryPro-TEST-APK
           path: android/app/build/outputs/apk/trial/debug/app-trial-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build LIVE signed APK (only if the key secrets exist)
+        env:
+          LD_KEYSTORE_BASE64: ${{ secrets.LD_KEYSTORE_BASE64 }}
+          LD_KEYSTORE_PASSWORD: ${{ secrets.LD_KEYSTORE_PASSWORD }}
+        working-directory: android
+        run: |
+          if [ -z "$LD_KEYSTORE_BASE64" ] || [ -z "$LD_KEYSTORE_PASSWORD" ]; then
+            echo "No signing secrets found. Skipping the LIVE build."
+            exit 0
+          fi
+          KS="$RUNNER_TEMP/legaldiary-release.jks"
+          echo "$LD_KEYSTORE_BASE64" | grep -v -e '-----' | base64 -d > "$KS"
+          export LD_KEYSTORE_FILE="$KS"
+          chmod +x gradlew
+          ./gradlew assembleLiveRelease -Pvcode=${{ github.run_number }} --stacktrace
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          echo "Signature of the LIVE apk (compare with your key fingerprint):"
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/live/release/app-live-release.apk | grep -i "SHA-256"
+          rm -f "$KS"
+
+      - name: Upload LIVE APK
+        if: ${{ hashFiles('android/app/build/outputs/apk/live/release/app-live-release.apk') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: LegalDiaryPro-LIVE-APK-DO-NOT-INSTALL-YET
+          path: android/app/build/outputs/apk/live/release/app-live-release.apk
           if-no-files-found: error
           retention-days: 30
 # end of build-apk.yml

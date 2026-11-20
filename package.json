@@ -12,6 +12,7 @@
     "lint": "tsc -p tsconfig.check.json && tsc -p tsconfig.ui.json && tsc -p tsconfig.sqlite.json && tsc -p tsconfig.reminders.json"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",

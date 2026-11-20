@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#E3B341" android:pathData="M52.5,26 h3 v40 h-3 z"/>
+    <path android:fillColor="#E3B341" android:pathData="M51,23 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 z"/>
+    <path android:fillColor="#E3B341" android:pathData="M31,30.8 L77,30.8 L77,33.2 L31,33.2 z"/>
+    <path android:fillColor="#E3B341" android:pathData="M46,66 h16 v2 h-16 z"/>
+    <path android:fillColor="#E3B341" android:pathData="M23,48 L39,48 A8,8 0 0 1 23,48 z"/>
+    <path android:fillColor="#E3B341" android:pathData="M69,48 L85,48 A8,8 0 0 1 69,48 z"/>
+    <path
+        android:strokeColor="#E3B341"
+        android:strokeWidth="0.9"
+        android:strokeLineCap="round"
+        android:pathData="M31,33 L23.5,48 M31,33 L38.5,48 M77,33 L69.5,48 M77,33 L84.5,48"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M53.4,70.5 Q45,67.5 36,69.5 L36,80 Q45,78 53.4,81.5 z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M54.6,70.5 Q63,67.5 72,69.5 L72,80 Q63,78 54.6,81.5 z"/>
+</vector>
+<!-- end of ic_logo_foreground.xml -->

@@ -81,7 +81,7 @@ jobs:
             exit 0
           fi
           KS="$RUNNER_TEMP/legaldiary-release.jks"
-          echo "$LD_KEYSTORE_BASE64" | grep -v -e '-----' | base64 -d > "$KS"
+          echo "$LD_KEYSTORE_BASE64" | tr -d '\r' | grep -v -e '-----' | base64 -d > "$KS"
           export LD_KEYSTORE_FILE="$KS"
           chmod +x gradlew
           ./gradlew assembleLiveRelease -Pvcode=${{ github.run_number }} --stacktrace

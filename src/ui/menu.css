@@ -1,12 +1,22 @@
 .top-left { display: flex; align-items: center; gap: 10px; }
 .menu-btn { padding: 8px 12px; font-size: 20px; line-height: 1; }
-.m-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, 0.5); z-index: 20; }
-.m-drawer { position: absolute; top: 0; bottom: 0; left: 0; width: 78%; max-width: 300px; background: #0B1F3A; color: #fff; overflow-y: auto; display: flex; flex-direction: column; border-right: 2px solid #C9A227; }
-.m-head { padding: 18px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
-.m-title { font-size: 18px; font-weight: 700; }
-.m-sub { font-size: 12px; color: #B8C4D9; margin-top: 2px; }
-.m-group { padding: 14px 16px 4px; font-size: 11px; letter-spacing: 1px; color: #C9A227; }
-.m-item { display: block; width: 100%; text-align: left; background: none; border: 0; color: #E6ECF7; padding: 13px 16px; font-size: 15px; cursor: pointer; }
-.m-item.active { background: rgba(201, 162, 39, 0.18); color: #fff; font-weight: 700; box-shadow: inset 4px 0 0 #C9A227; }
-.m-foot { margin-top: auto; padding: 14px 16px; font-size: 11px; color: #8C9AB5; }
+.app main.content { padding-bottom: 24px; }
+@keyframes m-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-slide { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.m-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, 0.55); z-index: 20; animation: m-fade 0.18s ease-out; }
+.m-drawer { position: absolute; top: 0; bottom: 0; left: 0; width: 86%; max-width: 340px; background: #0B1F3A; color: #fff; overflow-y: auto; display: flex; flex-direction: column; border-right: 2px solid #C9A227; padding-bottom: 12px; animation: m-slide 0.22s ease-out; }
+.m-head { margin: 12px; padding: 16px; border-radius: 14px; background: linear-gradient(135deg, #1F4FBF, #0B1F3A); border: 1px solid rgba(201, 162, 39, 0.6); }
+.m-title { font-size: 19px; font-weight: 700; }
+.m-sub { font-size: 12px; color: #C9D5EA; margin-top: 2px; }
+.m-count { display: inline-block; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: rgba(201, 162, 39, 0.2); color: #F3D675; font-size: 12px; font-weight: 700; }
+.m-group { padding: 12px 16px 6px; font-size: 11px; letter-spacing: 1.5px; color: #C9A227; }
+.m-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 12px; }
+.m-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 92px; padding: 12px; text-align: left; cursor: pointer; color: #fff; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px; }
+.m-tile:active { background: rgba(255, 255, 255, 0.16); }
+.m-tile.wide { grid-column: 1 / -1; min-height: 76px; }
+.m-tile.active { background: rgba(201, 162, 39, 0.2); border-color: #C9A227; box-shadow: inset 0 0 0 1px #C9A227; }
+.m-ico { font-size: 24px; line-height: 1.2; margin-bottom: 4px; }
+.m-txt { font-size: 14px; font-weight: 700; }
+.m-subtxt { font-size: 11px; color: #AEBBD3; }
+.m-foot { margin-top: auto; padding: 16px 16px 4px; font-size: 11px; color: #8C9AB5; }
 /* end of menu.css */

@@ -141,18 +141,10 @@ export function App() {
         {data && showMain && tab === 'clients' && <Clients cases={data.cases} onOpen={openCase} />}
         {data && showMain && tab === 'analytics' && <Analytics cases={data.cases} hearings={data.hearings} />}
       </main>
-      {data && showMain && (
-        <nav className="nav">
-          {TABS.map(t => (
-            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      )}
-      {menu && showMain && (
+      {menu && showMain && data && (
         <SideMenu
           current={tab}
+          caseCount={data.cases.length}
           onTab={setTab}
           onAction={onMenuAction}
           onClose={() => setMenu(false)}

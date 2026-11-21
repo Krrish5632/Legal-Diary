@@ -13,6 +13,8 @@ import { Analytics } from './Analytics';
 import { BackupPanel } from './BackupPanel';
 import { SearchSheet } from './SearchSheet';
 import { RemindersTab } from './RemindersTab';
+import { SideMenu } from './SideMenu';
+import type { MenuAction } from './SideMenu';
 import { syncReminders } from './reminders';
 import { listenTaps } from './notify';
 import { parseTapTarget } from '../core/remindersync';
@@ -21,9 +23,7 @@ import type { Tab } from './shared';
 import './forms.css';
 import './nav.css';
 import './reminders.css';
-
 interface Loaded { cases: CaseRecord[]; hearings: HearingRecord[] }
-
 export function App() {
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState('');
@@ -34,8 +34,8 @@ export function App() {
   const [searching, setSearching] = useState(false);
   const [backing, setBacking] = useState(false);
   const [reminding, setReminding] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [remNote, setRemNote] = useState('');
-
   const reload = useCallback(async () => {
     try {
       const [cases, hearings] = await Promise.all([repo.listCases(), repo.listHearings()]);
@@ -45,9 +45,7 @@ export function App() {
       setError('Could not read the saved data: ' + (e instanceof Error ? e.message : String(e)));
     }
   }, []);
-
   useEffect(() => { void reload(); }, [reload]);
-
   // After every load or save: make the phone's reminders match the saved data.
   useEffect(() => {
     if (!data) return;
@@ -55,7 +53,6 @@ export function App() {
     void syncReminders().then(n => { if (!dead) setRemNote(n.kind === 'bad' ? n.text : ''); });
     return () => { dead = true; };
   }, [data]);
-
   // When the app comes back to the screen, check again.
   useEffect(() => {
     const f = () => {
@@ -66,7 +63,6 @@ export function App() {
     document.addEventListener('visibilitychange', f);
     return () => document.removeEventListener('visibilitychange', f);
   }, []);
-
   // Tapping a reminder opens the case (or the Cause List when it covers several cases).
   useEffect(() => {
     let dead = false;
@@ -74,23 +70,34 @@ export function App() {
     void listenTaps(extra => {
       const t = parseTapTarget(extra);
       setReminding(false);
+      setMenu(false);
       if (t.caseId) setOpenId(t.caseId);
       else setTab('causelist');
     }).then(f => { if (dead) f(); else off = f; });
     return () => { dead = true; off(); };
   }, []);
-
   const open = data && openId ? data.cases.find(c => c.id === openId) ?? null : null;
   const showMain = !!data && (data.cases.length > 0 || fresh);
   const openCase = (c: CaseRecord) => setOpenId(c.id);
   const title = TABS.find(t => t.id === tab)?.label ?? '';
-
+  const onMenuAction = (a: MenuAction) => {
+    if (a === 'search') setSearching(true);
+    else if (a === 'reminders') setReminding(true);
+    else setBacking(true);
+  };
   return (
     <div className="app">
       <header className="topbar">
-        <div>
-          <div className="brand">Legal Diary Pro</div>
-          <div className="subtitle">{title}</div>
+        <div className="top-left">
+          {showMain && (
+            <button className="btn menu-btn" aria-label="Open menu" onClick={() => setMenu(true)}>
+              &#9776;
+            </button>
+          )}
+          <div>
+            <div className="brand">Legal Diary Pro</div>
+            <div className="subtitle">{title}</div>
+          </div>
         </div>
         {showMain && (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -142,6 +149,14 @@ export function App() {
             </button>
           ))}
         </nav>
+      )}
+      {menu && showMain && (
+        <SideMenu
+          current={tab}
+          onTab={setTab}
+          onAction={onMenuAction}
+          onClose={() => setMenu(false)}
+        />
       )}
       {open && data && (
         <CaseSheet

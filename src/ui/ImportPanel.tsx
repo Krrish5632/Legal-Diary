@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import type { ChangeEvent } from 'react';
 import { importCleanExport } from '../core/importer';
 import type { CleanExport } from '../core/importer';
 import { repo } from './store';
 import { nowIST } from './dateutil';
+import { FilePick } from './FilePick';
+
 export function ImportPanel({ onDone, empty = true }: { onDone: () => void; empty?: boolean }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  async function onFile(e: ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const f = input.files?.[0];
+
+  async function onFile(f: File | undefined) {
     if (!f) return;
     setBusy(true);
     setMsg('');
@@ -32,9 +32,9 @@ export function ImportPanel({ onDone, empty = true }: { onDone: () => void; empt
       setMsg('Could not import this file: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setBusy(false);
-      input.value = '';
     }
   }
+
   return (
     <div className="card import">
       <h2>{empty ? 'No cases on this device yet' : 'Import old cases'}</h2>
@@ -48,7 +48,7 @@ export function ImportPanel({ onDone, empty = true }: { onDone: () => void; empt
           changed, and nothing is deleted.
         </p>
       )}
-      <input type="file" accept=".json,application/json" onChange={onFile} disabled={busy} />
+      <FilePick accept=".json,application/json" disabled={busy} onPick={files => void onFile(files[0])} />
       {busy && <p>Importing...</p>}
       {msg && <p className="msg">{msg}</p>}
     </div>

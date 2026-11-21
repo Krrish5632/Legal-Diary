@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import {
   DOC_CATEGORIES, addDocument, deleteDocument, getDocumentBytes, listDocs, previewKind, updateDocument,
 } from '../core/documents';
@@ -7,13 +7,13 @@ import type { DocMeta } from '../core/documents';
 import { repo } from './store';
 import { fileStore } from './docstore';
 import { fmt, nowIST } from './dateutil';
-import { downloadBytes, shareBytes } from './files';
+import { downloadBytes, lastSaveError, shareBytes } from './files';
+import { FilePick } from './FilePick';
 import './docs.css';
 
 interface PreviewState { name: string; kind: 'image' | 'pdf'; url: string }
 
 const msgOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 const sizeText = (n: number): string => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 
 export function DocumentsTab({ caseId }: { caseId: string }) {
@@ -55,8 +55,8 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
     return () => { if (preview) URL.revokeObjectURL(preview.url); };
   }, [preview]);
 
-  function onPick(e: ChangeEvent<HTMLInputElement>) {
-    setPicked(Array.from(e.target.files ?? []));
+  function onPickFiles(files: File[]) {
+    setPicked(files);
     setMsg(''); setErr('');
   }
 
@@ -87,7 +87,7 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
     setErr(''); setMsg('');
     setPreview(null);
     const kind = previewKind(d.mime, d.name);
-    if (kind === 'none') { setErr('Preview is not available for this file type. Use Download.'); return; }
+    if (kind === 'none') { setErr('Preview is not available for this file type. Use Share or Download.'); return; }
     try {
       const got = await getDocumentBytes(repo, fileStore, d.id);
       const type = kind === 'pdf' ? 'application/pdf' : d.mime;
@@ -102,8 +102,10 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
     setErr(''); setMsg('');
     try {
       const got = await getDocumentBytes(repo, fileStore, d.id);
-      downloadBytes(d.name, got.bytes, d.mime);
-      setMsg('Download started: ' + d.name);
+      const outcome = await downloadBytes(d.name, got.bytes, d.mime);
+      if (outcome === 'saved') setMsg('Saved: ' + d.name);
+      else if (outcome === 'cancelled') setMsg('Save was cancelled. Nothing was saved.');
+      else setErr('Could not save ' + d.name + '. ' + lastSaveError());
     } catch (e) {
       setErr(msgOf(e));
     }
@@ -166,24 +168,21 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
             {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        <label>
-          File (PDF, photo or any file, up to 25 MB)
-          <input key={inputKey} type="file" multiple onChange={onPick} disabled={busy} />
-        </label>
+        <div>
+          <div>File (PDF, photo or any file, up to 25 MB)</div>
+          <FilePick key={inputKey} multiple disabled={busy} onPick={onPickFiles} />
+        </div>
         <label>
           Note (optional)
           <input className="input" value={note} onChange={e => setNote(e.target.value)} />
         </label>
-        {picked.length > 0 && <div className="note">Selected: {picked.map(f => f.name).join(', ')}</div>}
         <div className="form-buttons">
           <button type="submit" className="btn primary" disabled={busy}>{busy ? 'Saving...' : 'Add Document'}</button>
         </div>
       </form>
-
       {msg && <div className="ok">{msg}</div>}
       {err && <div className="err">{err}</div>}
       {loadErr && <div className="err">{loadErr}</div>}
-
       {preview && (
         <div className="doc-preview">
           <div className="row-sub">Preview: {preview.name}</div>
@@ -192,13 +191,12 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
           ) : (
             <iframe src={preview.url} title={preview.name} />
           )}
-          <div className="note">If the preview does not show here, use Download.</div>
+          <div className="note">If the preview does not show here, use Share or Download.</div>
           <div className="form-buttons">
             <button className="btn" onClick={() => setPreview(null)}>Close Preview</button>
           </div>
         </div>
       )}
-
       <h4>Documents ({docs.length})</h4>
       {docs.length === 0 ? (
         <div className="empty">No documents yet.</div>
@@ -213,7 +211,6 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
             {missing.has(d.id) && (
               <div className="doc-warn">The file for this document is missing on this device.</div>
             )}
-
             {editId === d.id ? (
               <div className="form">
                 <label>
@@ -244,7 +241,6 @@ export function DocumentsTab({ caseId }: { caseId: string }) {
                 <button className="btn" onClick={() => { setConfirmId(d.id); setErr(''); setMsg(''); }}>Delete</button>
               </div>
             )}
-
             {confirmId === d.id && (
               <div className="doc-confirm">
                 <div>

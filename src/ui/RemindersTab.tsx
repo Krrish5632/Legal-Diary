@@ -3,7 +3,9 @@ import type { CaseRecord, HearingRecord } from '../core/types';
 import { repo } from './store';
 import { DEFAULT_PREFS, loadPrefs, savePrefs } from '../core/reminders';
 import type { ReminderDetail, ReminderPrefs } from '../core/reminders';
+import { upcomingDateGroups } from '../core/reminderdates';
 import { todayIST } from '../core/dates';
+import { fmt } from './dateutil';
 import { syncReminders, reminderSettingsHelp } from './reminders';
 import type { ReminderNote } from './reminders';
 
@@ -16,7 +18,7 @@ function caseLabel(c: CaseRecord): string {
   return c.caseNumber + '/' + y;
 }
 
-export function RemindersTab({ cases, onOpen }: Props) {
+export function RemindersTab({ cases, hearings, onOpen }: Props) {
   const [prefs, setPrefs] = useState<ReminderPrefs>({ ...DEFAULT_PREFS });
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<ReminderNote | null>(null);
@@ -72,16 +74,20 @@ export function RemindersTab({ cases, onOpen }: Props) {
   const upcomingCases = cases
     .filter(c => c.status !== 'Disposed' && c.nextHearingDate && c.nextHearingDate >= today)
     .sort((a, b) => (a.nextHearingDate ?? '').localeCompare(b.nextHearingDate ?? ''));
-
   const muted = new Set(prefs.mutedCases);
-
   const toggleMuted = (id: string) => {
     const list = muted.has(id) ? prefs.mutedCases.filter(x => x !== id) : [...prefs.mutedCases, id];
     void save({ ...prefs, mutedCases: list }, false);
   };
 
-  const hours = Array.from({ length: 24 }, (_, h) => h);
+  const groups = upcomingDateGroups(cases, hearings, prefs, today);
+  const mutedDates = new Set(prefs.mutedDates);
+  const toggleDate = (d: string) => {
+    const list = mutedDates.has(d) ? prefs.mutedDates.filter(x => x !== d) : [...prefs.mutedDates, d];
+    void save({ ...prefs, mutedDates: list }, false);
+  };
 
+  const hours = Array.from({ length: 24 }, (_, h) => h);
   return (
     <div className="reminders">
       <div className="card">
@@ -90,7 +96,6 @@ export function RemindersTab({ cases, onOpen }: Props) {
           The app reminds you the evening before a hearing. Android needs your permission to show notifications.
           Nothing is sent over the internet.
         </p>
-
         <div className="r-row">
           <label className="r-check">
             <input
@@ -102,7 +107,6 @@ export function RemindersTab({ cases, onOpen }: Props) {
             <span>Turn reminders on</span>
           </label>
         </div>
-
         <div className="r-row">
           <div className="f-label">Remind me at</div>
           <select
@@ -118,7 +122,6 @@ export function RemindersTab({ cases, onOpen }: Props) {
             ))}
           </select>
         </div>
-
         <div className="r-row">
           <div className="f-label">What should the notification show?</div>
           <select
@@ -132,16 +135,56 @@ export function RemindersTab({ cases, onOpen }: Props) {
             <option value="count">Only how many hearings tomorrow</option>
           </select>
         </div>
-
         <div className="r-row">
           <button className="btn gold" disabled={busy || !prefs.enabled} onClick={() => void setNow()}>
             Set reminders now / Allow notifications
           </button>
         </div>
-
         <div className="r-hint">{reminderSettingsHelp()}</div>
         {note && <div className={'r-note r-' + note.kind}>{note.text}</div>}
         {busy && <div className="r-hint">Updating reminders...</div>}
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Make sure reminders arrive on time</h3>
+        <p className="small">
+          Some phones (especially Samsung) stop apps in the background to save battery, and then a reminder can be late
+          or missing. To prevent this, do both steps:
+        </p>
+        <div className="r-note r-info">
+          1. Open phone Settings &gt; Apps &gt; Legal Diary Pro &gt; Battery and choose &quot;Unrestricted&quot;.
+          <br />
+          2. Open Settings &gt; Battery &gt; Background usage limits and make sure Legal Diary Pro is NOT in the
+          sleeping apps lists (you can add it to &quot;Never sleeping apps&quot;).
+        </div>
+        <div className="r-hint">Menu names can differ a little on your phone. This only changes a phone setting; the app does not do it for you.</div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Mute a date</h3>
+        <p className="small">
+          A muted date gets no reminder for any case on that day. Turn it back on anytime.
+        </p>
+        {groups.length === 0 && <div className="empty">No upcoming hearing dates.</div>}
+        {groups.slice(0, 60).map(g => (
+          <div key={g.date} className="r-case">
+            <div style={{ flex: 1 }}>
+              <span className="r-caseno">{fmt(g.date)}</span>
+              <span className="r-casedate">
+                {g.count} case(s)
+                {g.high > 0 ? ', ' + g.high + ' high priority' : ''}
+                {g.muted ? ' - no reminder for this date' : ''}
+              </span>
+            </div>
+            <label className="r-mute">
+              <input type="checkbox" checked={g.muted} disabled={busy} onChange={() => toggleDate(g.date)} />
+              <span>Mute</span>
+            </label>
+          </div>
+        ))}
+        {groups.length > 60 && (
+          <div className="r-hint">Showing the next 60 dates.</div>
+        )}
       </div>
 
       <div className="card">

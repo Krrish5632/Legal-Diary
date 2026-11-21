@@ -1,0 +1,5 @@
+.fp { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.fp-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.fp-name { font-size: 13px; color: #475569; line-height: 1.4; word-break: break-word; }
+.fp-name.fp-has { color: #166534; font-weight: 700; }
+/* end of filepick.css */

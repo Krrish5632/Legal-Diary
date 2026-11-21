@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { ChangeEvent } from 'react';
 import {
   backupFileName, createBackup, parseBackup, previewRestore, restoreMerge, serializeBackup,
 } from '../core/backup';
@@ -13,10 +12,14 @@ import { fileStore } from './docstore';
 import { fmt, nowIST } from './dateutil';
 import { downloadBytes, downloadTextFile, lastSaveError } from './files';
 import type { SaveOutcome } from './files';
+import { FilePick } from './FilePick';
+
 interface PendingJson { kind: 'json'; file: BackupFile; preview: RestorePreview; replace: ReplacePreview }
 interface PendingZip { kind: 'zip'; zip: ZipBackup; preview: ZipPreview; replace: ReplacePreview }
 type Pending = PendingJson | PendingZip;
+
 const msgOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 // Throws unless the file was really saved, so nothing is reported as done by mistake.
 function needSaved(outcome: SaveOutcome, what: string): void {
   if (outcome === 'saved') return;
@@ -28,6 +31,7 @@ function needSaved(outcome: SaveOutcome, what: string): void {
   const d = lastSaveError();
   throw new Error('The ' + what + ' could not be saved.' + (d ? ' ' + d : '') + ' Nothing was changed.');
 }
+
 function replaceText(r: ReplaceResult): string {
   return (
     'Replace finished and checked. Added ' + r.addedCases + ' case(s), replaced ' + r.replacedCases +
@@ -37,6 +41,7 @@ function replaceText(r: ReplaceResult): string {
     ', replaced ' + r.replacedHearings + '.'
   );
 }
+
 export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onChanged: () => Promise<void> }) {
   const [counts, setCounts] = useState<{ cases: number; hearings: number; audit: number } | null>(null);
   const [last, setLast] = useState<string | null>(null);
@@ -46,6 +51,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
   const [err, setErr] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [confirm, setConfirm] = useState(false);
+
   async function refresh() {
     try {
       setCounts(await repo.counts());
@@ -54,7 +60,9 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
       setErr('Could not read the saved data: ' + msgOf(e));
     }
   }
+
   useEffect(() => { void refresh(); }, []);
+
   async function saveJson(prefix: string): Promise<BackupFile> {
     const now = nowIST();
     const b = await createBackup(repo, now);
@@ -63,6 +71,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
     await repo.commit({ setMeta: { last_backup_at: now } });
     return b;
   }
+
   async function saveZip(prefix: string) {
     const now = nowIST();
     const r = await createZipBackup(repo, fileStore, now);
@@ -73,6 +82,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
     await repo.commit({ setMeta: { last_backup_at: now } });
     return r;
   }
+
   async function doBackupZip() {
     if (busy) return;
     setBusy(true); setErr(''); setMsg(''); setWarn('');
@@ -95,6 +105,7 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
       setBusy(false);
     }
   }
+
   async function doBackupJson() {
     if (busy) return;
     setBusy(true); setErr(''); setMsg(''); setWarn('');
@@ -108,9 +119,8 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
       setBusy(false);
     }
   }
-  async function onFile(e: ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const f = input.files?.[0];
+
+  async function onFile(f: File | undefined) {
     if (!f) return;
     setBusy(true); setErr(''); setMsg(''); setWarn(''); setPending(null); setConfirm(false);
     try {
@@ -134,9 +144,9 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
       setErr(msgOf(ex));
     } finally {
       setBusy(false);
-      input.value = '';
     }
   }
+
   async function doRestore(mode: 'merge' | 'replace') {
     if (!pending || busy) return;
     setBusy(true); setErr(''); setMsg(''); setWarn(''); setConfirm(false);
@@ -180,8 +190,10 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
       setBusy(false);
     }
   }
+
   const p = pending ? pending.preview : null;
   const rp = pending ? pending.replace : null;
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
@@ -209,7 +221,11 @@ export function BackupPanel({ onClose, onChanged }: { onClose: () => void; onCha
           before anything changes. &quot;Add missing&quot; never changes a case already on this device.
           &quot;Replace&quot; makes the cases match the backup, but it never deletes anything.
         </div>
-        <input type="file" accept=".zip,.json,application/zip,application/json" onChange={e => void onFile(e)} disabled={busy} />
+        <FilePick
+          accept=".zip,.json,application/zip,application/json"
+          disabled={busy}
+          onPick={files => void onFile(files[0])}
+        />
         {pending && p && rp && (
           <div className="card p3-gap">
             <h3>Check before restoring</h3>

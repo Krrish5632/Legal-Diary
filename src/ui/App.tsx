@@ -34,6 +34,7 @@ export function App() {
   const [searching, setSearching] = useState(false);
   const [backing, setBacking] = useState(false);
   const [reminding, setReminding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [menu, setMenu] = useState(false);
   const [remNote, setRemNote] = useState('');
   const reload = useCallback(async () => {
@@ -122,12 +123,20 @@ export function App() {
             <button className="btn" onClick={() => setFresh(true)}>Start with an empty diary instead</button>
           </>
         )}
+        {data && showMain && data.cases.length === 0 && (
+          <div className="card">
+            <strong>The diary is empty.</strong>
+            <p>If you have your old cases in clean_export.json, you can bring them in now.</p>
+            <button className="btn" onClick={() => setImporting(true)}>Import old cases</button>
+          </div>
+        )}
         {data && showMain && tab === 'dashboard' && (
           <>
             <Dashboard cases={data.cases} hearings={data.hearings} onOpen={openCase} go={setTab} />
             <div className="p3-more">
               <button className="btn" onClick={() => setReminding(true)}>Reminders</button>
               <button className="btn" onClick={() => setBacking(true)}>Backup &amp; Restore</button>
+              <button className="btn" onClick={() => setImporting(true)}>Import old cases</button>
             </div>
           </>
         )}
@@ -168,6 +177,17 @@ export function App() {
         <SearchSheet cases={data.cases} hearings={data.hearings} onOpen={openCase} onClose={() => setSearching(false)} />
       )}
       {backing && <BackupPanel onClose={() => setBacking(false)} onChanged={reload} />}
+      {importing && (
+        <div className="r-sheet">
+          <div className="r-sheet-head">
+            <strong>Import old cases</strong>
+            <button className="btn" onClick={() => setImporting(false)}>Close</button>
+          </div>
+          <div className="r-sheet-body">
+            <ImportPanel empty={false} onDone={() => void reload()} />
+          </div>
+        </div>
+      )}
       {reminding && data && (
         <div className="r-sheet">
           <div className="r-sheet-head">
